@@ -1,0 +1,11 @@
+# Environnement Python
+.venv/
+__pycache__/
+
+# SECRETS : ne jamais publier
+.env
+credentials.json
+token.json
+
+# Base générée par le script (on publie le script, pas la base)
+*.db
