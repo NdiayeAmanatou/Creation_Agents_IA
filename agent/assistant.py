@@ -8,7 +8,7 @@ from pydantic_ai.usage import UsageLimits
 from outils import rechercher_biens, detail_bien
 
 load_dotenv()
-MODELE = os.getenv("MODELE", "google-gla:gemini-2.5-flash")
+MODELE = os.getenv("MODELE", "google:gemini-3.5-flash")
 
 #  le prompt système, la « fiche de poste » de l'agent
 PROMPT_SYSTEME = """
