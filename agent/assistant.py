@@ -6,6 +6,9 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.usage import UsageLimits
 
 from outils import rechercher_biens, detail_bien
+from datetime import datetime
+from pathlib import Path
+
 
 load_dotenv()
 MODELE = os.getenv("MODELE", "google:gemini-3.5-flash")
@@ -39,8 +42,34 @@ agent = Agent(
 
 LIMITES = UsageLimits(request_limit=8)
 
-# la conversation dans le terminal
+# traces
+DOSSIER_TRACES = Path(__file__).parent.parent / "traces"
 
+
+def afficher_trace(resultat):
+    print("\n----------------- TRACE -----------------")
+    for message in resultat.all_messages():
+        for part in message.parts:
+            if part.part_kind == "tool-call":
+                print(f"[APPEL]    {part.tool_name}({part.args_as_dict()})")
+            elif part.part_kind == "tool-return":
+                print(f"[RESULTAT] {part.content}")
+            elif part.part_kind == "retry-prompt":
+                print(f"[ERREUR renvoyée au modèle] {part.content}")
+
+    u = resultat.usage
+    print(f"[BILAN]    {u.requests} appels au modèle, {u.tool_calls} appels d'outils, "
+          f"{u.input_tokens} tokens en entrée, {u.output_tokens} tokens en sortie")
+    print("-----------------------------------------")
+
+
+def sauvegarder_trace(resultat):
+    DOSSIER_TRACES.mkdir(exist_ok=True)
+    fichier = DOSSIER_TRACES / f"trace_{datetime.now():%Y%m%d_%H%M%S}.json"
+    fichier.write_bytes(resultat.all_messages_json())
+    return fichier
+
+# la conversation dans le terminal
 if __name__ == "__main__":
     print(f"Assistant Sama Kër ({MODELE}). Tapez 'quitter' pour sortir.")
 
@@ -52,6 +81,10 @@ if __name__ == "__main__":
         try:
             resultat = agent.run_sync(question, usage_limits=LIMITES)
             print(f"\nAgent > {resultat.output}")
+
+            afficher_trace(resultat)
+            fichier = sauvegarder_trace(resultat)
+            print(f"(trace enregistrée : {fichier.name})")
         except UsageLimitExceeded:
             print("\nAgent > Désolé, je n'ai pas réussi à traiter la demande "
                   "(nombre maximal d'étapes atteint). Un conseiller va vous répondre.")
